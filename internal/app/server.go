@@ -1,6 +1,9 @@
 package app
 
 import (
+	item_handler "github.com/efimovad/avito-internship/internal/app/item/delivery/http"
+	item_repo "github.com/efimovad/avito-internship/internal/app/item/repository"
+	item_ucase "github.com/efimovad/avito-internship/internal/app/item/usecase"
 	"github.com/efimovad/avito-internship/internal/store"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -35,10 +38,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Configure() error {
-	_, err := store.NewStore(s.Config.DatabaseURL)
+	db, err := store.NewStore(s.Config.DatabaseURL)
 	if err != nil {
 		return errors.Wrap(err, "configuring server")
 	}
+
+	itemRep := item_repo.NewItemRepository(db)
+	itemUcase := item_ucase.NewItemUsecase(itemRep)
+	item_handler.NewItemHandler(s.Mux, itemUcase, s.Sanitizer, s.Logger, s.SessionStore)
 
 	return nil
 }

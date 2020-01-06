@@ -52,13 +52,13 @@ func (r *Repository) Get(id int64) (*model.Item, error) {
 	myItem := &model.Item{}
 
 	if err := r.db.QueryRow(
-		`SELECT id, title, price, images[0] FROM items WHERE id = $1`,
+		`SELECT id, title, price, images[1] FROM items WHERE id = $1`,
 		id,
 	).Scan(
 		&myItem.ID,
 		&myItem.Title,
 		&myItem.Price,
-		&myItem.Images[0],
+		&myItem.MainImage,
 	); err != nil {
 		return nil, err
 	}
@@ -70,16 +70,16 @@ func (r *Repository) List(params model.Params) ([]model.Item, error) {
 	rows, err := r.db.Query(`
 		 SELECT 
        			title, 
-		        images[0] AS images, 
+		        images[1] AS images, 
 		        price 	
 		 FROM 
 		      items 
 		 ORDER BY 
-		          CASE WHEN $1 AND $2 THEN date END DESC,
-		          CASE WHEN !$1 AND $2 THEN date END ASC, 
-		          CASE WHEN $1 AND $3 THEN price END DESC,
-		          CASE WHEN !$1 AND $3 THEN price END ASC
-		 LIMIT 10 OFFSET ($4 - 1) * 10;
+		          CASE WHEN ($1 AND $2) THEN date END DESC,
+		          CASE WHEN ($1 AND $3) THEN price END DESC,
+		          CASE WHEN (NOT $1 AND $2) THEN date END ASC, 
+		          CASE WHEN (NOT $1 AND $3) THEN price END ASC
+		 LIMIT 10 OFFSET CASE WHEN $4 > 0 THEN ($4 - 1) * 10 END;
 	`, params.Desc, params.Date, params.Price, params.Page,
 	)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *Repository) List(params model.Params) ([]model.Item, error) {
 
 	for rows.Next() {
 		i := model.Item{}
-		err := rows.Scan(&i.Title, &i.Images[0], &i.Price)
+		err := rows.Scan(&i.Title, &i.MainImage, &i.Price)
 
 		if err != nil {
 			return nil, err
