@@ -1,6 +1,8 @@
 package item_handler
 
 import (
+	"encoding/json"
+	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/efimovad/avito-internship/internal/app/general"
 	"github.com/efimovad/avito-internship/internal/app/item"
 	"github.com/efimovad/avito-internship/internal/model"
@@ -9,8 +11,12 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/go-playground/validator.v9"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
+	"time"
+
+	//"time"
 )
 
 type Handler struct {
@@ -18,6 +24,7 @@ type Handler struct {
 	//sanitizer    *bluemonday.Policy
 	//logger       *zap.SugaredLogger
 	sessionStore sessions.Store
+	memcacheClient *memcache.Client
 }
 
 //func NewItemHandler(m *mux.Router, ucase item.Usecase, sanitizer *bluemonday.Policy, logger *zap.SugaredLogger, sessionStore sessions.Store) {
@@ -27,11 +34,14 @@ func NewItemHandler(m *mux.Router, ucase item.Usecase, sessionStore sessions.Sto
 		//sanitizer:    sanitizer,
 		//logger:       logger,
 		sessionStore: sessionStore,
+		memcacheClient: memcache.New("10.0.0.1:11211", "10.0.0.2:11211", "10.0.0.3:11212"),
 	}
+	handler.memcacheClient.Timeout = time.Second * 10
 
 	m.HandleFunc("/item", handler.CreateItem).Methods(http.MethodPost)
 	m.HandleFunc("/item/{id:[0-9]+}", handler.GetItem).Methods(http.MethodGet)
 	m.HandleFunc("/items", handler.GetItems).Methods(http.MethodGet)
+
 }
 
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +106,11 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	it, err := h.memcacheClient.Get("item")//+ strconv.FormatInt(id, 10))
+	if err != nil {
+		log.Println(it)
+	}
+
 	myItem, err := h.usecase.Get(id, allInfo)
 	if err != nil {
 		err = errors.Wrapf(err, "GetItem<-usecase.Get()")
@@ -103,8 +118,21 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	text, _ := json.Marshal(myItem)
+	memcacheItem := &memcache.Item{
+		Key:        "item", //+ strconv.FormatInt(id, 10),
+		Value:      text,
+		Expiration: 20,
+	}
+
+	//h.memcacheClient.Timeout = time.Second * 10
+	if err := h.memcacheClient.Set(memcacheItem); err != nil {
+		log.Println(err)
+	}
+
 	general.Respond(w, r, http.StatusOK, myItem)
 }
+
 
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

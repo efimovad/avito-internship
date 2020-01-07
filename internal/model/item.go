@@ -7,7 +7,7 @@ type Item struct {
 	Title string `json:"title" validate:"required,min=1,max=200"`
 	Description string `json:"description,omitempty" validate:"required,min=1,max=1000"`
 	Date time.Time `json:"-"`
-	Price float32 `json:"price"`
+	Price float32 `json:"price" validate:"required,min=0"`
 	MainImage string `json:"mainImage,omitempty"`
 	Images []string `json:"images,omitempty" validate:"min=0,max=3"`
 }
