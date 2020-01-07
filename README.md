@@ -25,3 +25,6 @@
 - написаны юнит тесты
 - контейнеризация – возможность поднять проект с помощью `docker-compose up`
 - кеширование – для увеличения скорости ответа от сервера, может быть добавлено кеширование (Redis/Memcached)
+
+
+mockgen -source=internal/app/item/repository.go -package=item_ucase -mock_names=Repository=MockItemRepository > internal/app/item/usecase/item_repo_mock.go

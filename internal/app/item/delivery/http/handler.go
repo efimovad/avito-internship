@@ -6,10 +6,8 @@ import (
 	"github.com/efimovad/avito-internship/internal/model"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/microcosm-cc/bluemonday"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
-	validator "gopkg.in/go-playground/validator.v9"
+	"gopkg.in/go-playground/validator.v9"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -17,27 +15,23 @@ import (
 
 type Handler struct {
 	usecase		 item.Usecase
-	sanitizer    *bluemonday.Policy
-	logger       *zap.SugaredLogger
+	//sanitizer    *bluemonday.Policy
+	//logger       *zap.SugaredLogger
 	sessionStore sessions.Store
 }
 
-func NewItemHandler(m *mux.Router, ucase item.Usecase, sanitizer *bluemonday.Policy, logger *zap.SugaredLogger, sessionStore sessions.Store) {
+//func NewItemHandler(m *mux.Router, ucase item.Usecase, sanitizer *bluemonday.Policy, logger *zap.SugaredLogger, sessionStore sessions.Store) {
+func NewItemHandler(m *mux.Router, ucase item.Usecase, sessionStore sessions.Store) {
 	handler := &Handler{
 		usecase:   	  ucase,
-		sanitizer:    sanitizer,
-		logger:       logger,
+		//sanitizer:    sanitizer,
+		//logger:       logger,
 		sessionStore: sessionStore,
 	}
 
-	m.HandleFunc("/", handler.MainHandler).Methods(http.MethodGet)
 	m.HandleFunc("/item", handler.CreateItem).Methods(http.MethodPost)
 	m.HandleFunc("/item/{id:[0-9]+}", handler.GetItem).Methods(http.MethodGet)
 	m.HandleFunc("/items", handler.GetItems).Methods(http.MethodGet)
-}
-
-func (h *Handler) MainHandler(w http.ResponseWriter, r *http.Request) {
-	general.Respond(w, r, http.StatusCreated, "hello world!")
 }
 
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +52,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	myItem := new(model.Item)
+	myItem.Images = make([]string, 0)
 	if err := myItem.UnmarshalJSON(body); err != nil {
 		err = errors.Wrapf(err, "CreateItem<-myItem.UnmarshalJSON()")
 		general.Error(w, r, http.StatusBadRequest, err)
@@ -104,11 +99,11 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 	myItem, err := h.usecase.Get(id, allInfo)
 	if err != nil {
 		err = errors.Wrapf(err, "GetItem<-usecase.Get()")
-		general.Error(w, r, http.StatusBadRequest, err)
+		general.Error(w, r, http.StatusNotFound, err)
 		return
 	}
 
-	general.Respond(w, r, http.StatusCreated, myItem)
+	general.Respond(w, r, http.StatusOK, myItem)
 }
 
 func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
@@ -140,9 +135,9 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 
 	items, err := h.usecase.List(params)
 	if err != nil {
-		err = errors.Wrapf(err, "HandleGetJob<-Atoi(wrong id)")
-		general.Error(w, r, http.StatusBadRequest, err)
+		err = errors.Wrapf(err, "GetItems<-usecase.List()")
+		general.Error(w, r, http.StatusNotFound, err)
 		return
 	}
-	general.Respond(w, r, http.StatusCreated, items)
+	general.Respond(w, r, http.StatusOK, items)
 }

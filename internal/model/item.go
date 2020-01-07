@@ -9,7 +9,7 @@ type Item struct {
 	Date time.Time `json:"-"`
 	Price float32 `json:"price"`
 	MainImage string `json:"mainImage,omitempty"`
-	Images [3]string `json:"images,omitempty"`
+	Images []string `json:"images,omitempty" validate:"min=0,max=3"`
 }
 
 type Params struct {

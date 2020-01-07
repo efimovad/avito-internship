@@ -30,6 +30,7 @@ func (r *Repository) GetAll(id int64) (*model.Item, error) {
 	var arr pq.StringArray
 
 	myItem := &model.Item{}
+	myItem.Images = make([]string, 0)
 	if err := r.db.QueryRow(
 		`SELECT id, title, price, description, images FROM items WHERE id = $1`,
 		id,
@@ -42,8 +43,8 @@ func (r *Repository) GetAll(id int64) (*model.Item, error) {
 	); err != nil {
 		return nil, err
 	}
-	for i, image := range arr {
-		myItem.Images[i] = image
+	for _, image := range arr {
+		myItem.Images = append(myItem.Images, image)
 	}
 	return myItem, nil
 }

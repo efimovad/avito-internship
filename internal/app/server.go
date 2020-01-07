@@ -45,7 +45,7 @@ func (s *Server) Configure() error {
 
 	itemRep := item_repo.NewItemRepository(db)
 	itemUcase := item_ucase.NewItemUsecase(itemRep)
-	item_handler.NewItemHandler(s.Mux, itemUcase, s.Sanitizer, s.Logger, s.SessionStore)
+	item_handler.NewItemHandler(s.Mux, itemUcase, s.SessionStore)
 
 	return nil
 }

@@ -18,13 +18,13 @@ func testItem(t *testing.T) *model.Item {
 		Date:        time.Now(),
 		Price:       100,
 		MainImage:   "http://image/1",
-		Images:      [3]string{"http://image/1", "http://image/2", "http://image/3"},
+		Images:      []string{"http://image/1", "http://image/2", "http://image/3"},
 	}
 }
 
 func compare(l model.Item, r model.Item, t *testing.T) bool {
 	t.Helper()
-	return l.Title == r.Title && l.Price == r.Price && l.Images[0] == r.Images[0]
+	return l.Title == r.Title && l.Price == r.Price && l.MainImage == r.MainImage
 }
 
 func compareAll(l model.Item, r model.Item, t *testing.T) bool {
@@ -121,7 +121,7 @@ func TestRepository_Get(t *testing.T) {
 	}
 
 	for _, item := range expect {
-		rows = rows.AddRow(item.ID, item.Title, item.Price, item.Images[0])
+		rows = rows.AddRow(item.ID, item.Title, item.Price, item.MainImage)
 	}
 
 	mock.
@@ -230,7 +230,7 @@ func TestRepository_GetAll(t *testing.T) {
 		return
 	}
 
-	if !compare(*item, *expect[0], t) {
+	if !compareAll(*item, *expect[0], t) {
 		t.Errorf("results not match, want %v, have %v", expect[0], item)
 		return
 	}
