@@ -53,7 +53,7 @@ func (r *Repository) Get(id int64) (*model.Item, error) {
 	myItem := &model.Item{}
 
 	if err := r.db.QueryRow(
-		`SELECT id, title, price, images[1] FROM items WHERE id = $1`,
+		`SELECT id, title, price, CASE WHEN array_length(images, 1) > 0 THEN images[1] ELSE '' END FROM items WHERE id = $1`,
 		id,
 	).Scan(
 		&myItem.ID,
@@ -71,7 +71,7 @@ func (r *Repository) List(params model.Params) ([]model.Item, error) {
 	rows, err := r.db.Query(`
 		 SELECT 
        			title, 
-		        images[1] AS images, 
+		        CASE WHEN array_length(images, 1) > 0 THEN images[1] ELSE '' END AS images, 
 		        price 	
 		 FROM 
 		      items 
