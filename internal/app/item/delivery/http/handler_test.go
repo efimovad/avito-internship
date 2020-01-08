@@ -8,6 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -72,7 +73,9 @@ func TestHandler_CreateItem(t *testing.T) {
 
 	router := mux.NewRouter()
 	sessionStore := sessions.NewCookieStore([]byte(SessionKey))
-	NewItemHandler(router, ucase, sessionStore)
+	sanitizer := bluemonday.UGCPolicy()
+
+	NewItemHandler(router, ucase, sessionStore, sanitizer)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -151,7 +154,9 @@ func TestHandler_GetItem(t *testing.T) {
 
 	router := mux.NewRouter()
 	sessionStore := sessions.NewCookieStore([]byte(SessionKey))
-	NewItemHandler(router, ucase, sessionStore)
+	sanitizer := bluemonday.UGCPolicy()
+
+	NewItemHandler(router, ucase, sessionStore, sanitizer)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -211,7 +216,9 @@ func TestHandler_GetItems(t *testing.T) {
 
 	router := mux.NewRouter()
 	sessionStore := sessions.NewCookieStore([]byte(SessionKey))
-	NewItemHandler(router, ucase, sessionStore)
+	sanitizer := bluemonday.UGCPolicy()
+
+	NewItemHandler(router, ucase, sessionStore,sanitizer)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -8,35 +8,28 @@ import (
 	"github.com/efimovad/avito-internship/internal/model"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/pkg/errors"
 	"gopkg.in/go-playground/validator.v9"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
-	"time"
-
-	//"time"
 )
 
 type Handler struct {
-	usecase		 item.Usecase
-	//sanitizer    *bluemonday.Policy
-	//logger       *zap.SugaredLogger
-	sessionStore sessions.Store
-	memcacheClient *memcache.Client
+	usecase			item.Usecase
+	sanitizer		*bluemonday.Policy
+	sessionStore	sessions.Store
+	memcacheClient	*memcache.Client
 }
 
-//func NewItemHandler(m *mux.Router, ucase item.Usecase, sanitizer *bluemonday.Policy, logger *zap.SugaredLogger, sessionStore sessions.Store) {
-func NewItemHandler(m *mux.Router, ucase item.Usecase, sessionStore sessions.Store) {
+func NewItemHandler(m *mux.Router, ucase item.Usecase, sessionStore sessions.Store, sanitizer *bluemonday.Policy) {
 	handler := &Handler{
 		usecase:   	  ucase,
-		//sanitizer:    sanitizer,
-		//logger:       logger,
+		sanitizer:    sanitizer,
 		sessionStore: sessionStore,
-		memcacheClient: memcache.New("10.0.0.1:11211", "10.0.0.2:11211", "10.0.0.3:11212"),
+		memcacheClient: nil,
 	}
-	handler.memcacheClient.Timeout = time.Second * 10
 
 	m.HandleFunc("/item", handler.CreateItem).Methods(http.MethodPost)
 	m.HandleFunc("/item/{id:[0-9]+}", handler.GetItem).Methods(http.MethodGet)
@@ -76,6 +69,8 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	myItem.Sanitize(h.sanitizer)
+
 	if err := h.usecase.Create(myItem); err != nil {
 		err := errors.Wrap(err, "CreateItem<-usecase.Create()")
 		general.Error(w, r, http.StatusInternalServerError, err)
@@ -97,7 +92,6 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var allInfo bool
-
 	fields := r.URL.Query().Get("fields")
 	if fields != "" {
 		allInfo, err = strconv.ParseBool(fields)
@@ -106,9 +100,9 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	it, err := h.memcacheClient.Get("item")//+ strconv.FormatInt(id, 10))
-	if err != nil {
-		log.Println(it)
+	if cachedItem, err := h.getFromCache(id, allInfo); err == nil {
+		general.Respond(w, r, http.StatusOK, cachedItem)
+		return
 	}
 
 	myItem, err := h.usecase.Get(id, allInfo)
@@ -118,19 +112,50 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	text, _ := json.Marshal(myItem)
-	memcacheItem := &memcache.Item{
-		Key:        "item", //+ strconv.FormatInt(id, 10),
-		Value:      text,
+	_ = h.setToCache(myItem, id, allInfo)
+
+	general.Respond(w, r, http.StatusOK, myItem)
+}
+
+func (h * Handler) setToCache(myItem *model.Item, id int64, allInfo bool) error {
+	if h.memcacheClient == nil {
+		h.memcacheClient = memcache.New("memcached:11211")
+	}
+
+	jsonItem, err := json.Marshal(myItem)
+	if err != nil {
+		return errors.Wrap(err, "json.Marshal()")
+	}
+
+	cachedItem := &memcache.Item{
+		Key:        "item" + strconv.FormatInt(id, 10) + strconv.FormatBool(allInfo),
+		Value:      jsonItem,
 		Expiration: 20,
 	}
 
-	//h.memcacheClient.Timeout = time.Second * 10
-	if err := h.memcacheClient.Set(memcacheItem); err != nil {
-		log.Println(err)
+	err = h.memcacheClient.Set(cachedItem)
+	if err != nil {
+		return errors.Wrap(err, "memcacheClient.Set()")
 	}
 
-	general.Respond(w, r, http.StatusOK, myItem)
+	return nil
+}
+
+func (h *Handler) getFromCache(id int64, allInfo bool) (*model.Item, error) {
+	if h.memcacheClient == nil {
+		h.memcacheClient = memcache.New("memcached:11211")
+	}
+
+	it, err := h.memcacheClient.Get("item" + strconv.FormatInt(id, 10) + strconv.FormatBool(allInfo))
+	if err != nil {
+		return nil, errors.Wrap(err, "memcacheClient.Get()")
+	}
+
+	cachedItem := &model.Item{}
+	if err := json.Unmarshal(it.Value, &cachedItem); err != nil {
+		return nil, errors.Wrap(err, "unmarshal json")
+	}
+	return cachedItem, nil
 }
 
 
