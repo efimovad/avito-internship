@@ -7,6 +7,8 @@ import (
 	"github.com/lib/pq"
 )
 
+const ElemPerPage = 10
+
 type Repository struct {
 	db *sql.DB
 }
@@ -80,8 +82,8 @@ func (r *Repository) List(params model.Params) ([]model.Item, error) {
 		          CASE WHEN ($1 AND $3) THEN price END DESC,
 		          CASE WHEN (NOT $1 AND $2) THEN date END ASC, 
 		          CASE WHEN (NOT $1 AND $3) THEN price END ASC
-		 LIMIT 10 OFFSET CASE WHEN $4 > 0 THEN ($4 - 1) * 10 END;
-	`, params.Desc, params.Date, params.Price, params.Page,
+		 LIMIT $5 OFFSET CASE WHEN $4 > 0 THEN ($4 - 1) * $5 END;
+	`, params.Desc, params.Date, params.Price, params.Page, ElemPerPage,
 	)
 	if err != nil {
 		return nil, err

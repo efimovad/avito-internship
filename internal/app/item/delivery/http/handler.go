@@ -16,6 +16,10 @@ import (
 	"strconv"
 )
 
+const (
+	MemCachedService = "memcached:11211"
+)
+
 type Handler struct {
 	usecase			item.Usecase
 	sanitizer		*bluemonday.Policy
@@ -96,7 +100,8 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 	if fields != "" {
 		allInfo, err = strconv.ParseBool(fields)
 		if err != nil {
-			allInfo = false
+			general.Error(w, r, http.StatusBadRequest, errors.Wrap(err, "wrong fields param"))
+			return
 		}
 	}
 
@@ -119,7 +124,7 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 
 func (h * Handler) setToCache(myItem *model.Item, id int64, allInfo bool) error {
 	if h.memcacheClient == nil {
-		h.memcacheClient = memcache.New("memcached:11211")
+		h.memcacheClient = memcache.New(MemCachedService)
 	}
 
 	jsonItem, err := json.Marshal(myItem)
@@ -143,7 +148,7 @@ func (h * Handler) setToCache(myItem *model.Item, id int64, allInfo bool) error 
 
 func (h *Handler) getFromCache(id int64, allInfo bool) (*model.Item, error) {
 	if h.memcacheClient == nil {
-		h.memcacheClient = memcache.New("memcached:11211")
+		h.memcacheClient = memcache.New(MemCachedService)
 	}
 
 	it, err := h.memcacheClient.Get("item" + strconv.FormatInt(id, 10) + strconv.FormatBool(allInfo))
@@ -168,6 +173,9 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 		params.Date = true
 	} else if sort == "price" {
 		params.Price = true
+	} else {
+		general.Error(w, r, http.StatusBadRequest, errors.New("wrong sort param"))
+		return
 	}
 
 	desc := r.URL.Query().Get("desc")
@@ -175,6 +183,9 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 		isDesc, err := strconv.ParseBool(desc)
 		if err == nil {
 			params.Desc = isDesc
+		} else {
+			general.Error(w, r, http.StatusBadRequest, errors.Wrap(err, "wrong desc param"))
+			return
 		}
 	}
 
@@ -183,6 +194,9 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 		pageInt, err := strconv.ParseInt(page, 10, 64)
 		if err == nil {
 			params.Page = pageInt
+		} else {
+			general.Error(w, r, http.StatusBadRequest, errors.Wrap(err, "wrong page param"))
+			return
 		}
 	}
 

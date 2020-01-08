@@ -308,7 +308,7 @@ func TestRepository_List(t *testing.T) {
 
 	mock.
 		ExpectQuery("SELECT").
-		WithArgs(params.Desc, params.Date, params.Price, params.Page).
+		WithArgs(params.Desc, params.Date, params.Price, params.Page, ElemPerPage).
 		WillReturnRows(rows)
 
 	repo := NewItemRepository(db)
@@ -332,7 +332,7 @@ func TestRepository_List(t *testing.T) {
 	// query error
 	mock.
 		ExpectQuery("SELECT").
-		WithArgs(params.Desc, params.Date, params.Price, params.Page).
+		WithArgs(params.Desc, params.Date, params.Price, params.Page, ElemPerPage).
 		WillReturnError(fmt.Errorf("db_error"))
 
 	_, err = repo.List(params)

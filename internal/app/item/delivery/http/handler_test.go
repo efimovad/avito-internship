@@ -198,17 +198,6 @@ func TestHandler_GetItems(t *testing.T) {
 			expectedCode: 200,
 			expectedErr:  nil,
 		},
-		/*{
-			name: "incorrect params",
-			params:	model.Params{
-				Date:  true,
-				Price: true,
-				Desc:  false,
-				Page:  0,
-			},
-			expectedCode: 400,
-			expectedErr: nil,
-		},*/
 	}
 
 	ctrl := gomock.NewController(t)
