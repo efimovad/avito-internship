@@ -173,7 +173,7 @@ func (h *Handler) GetItems(w http.ResponseWriter, r *http.Request) {
 		params.Date = true
 	} else if sort == "price" {
 		params.Price = true
-	} else {
+	} else if sort != "" {
 		general.Error(w, r, http.StatusBadRequest, errors.New("wrong sort param"))
 		return
 	}

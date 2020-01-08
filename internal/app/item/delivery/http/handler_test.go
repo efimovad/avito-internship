@@ -184,6 +184,7 @@ func TestHandler_GetItems(t *testing.T) {
 	testCases := []struct {
 		name         string
 		params		 model.Params
+		url			 string
 		expectedCode int
 		expectedErr	 error
 	}{
@@ -195,7 +196,26 @@ func TestHandler_GetItems(t *testing.T) {
 				Desc:  false,
 				Page:  0,
 			},
-			expectedCode: 200,
+			url: "/items?sort=date&desc=false",
+			expectedCode: http.StatusOK,
+			expectedErr:  nil,
+		},
+		{
+			name: "without params",
+			url: "/items",
+			params:	model.Params{
+				Date:  false,
+				Price: false,
+				Desc:  false,
+				Page:  0,
+			},
+			expectedCode: http.StatusOK,
+			expectedErr:  nil,
+		},
+		{
+			name: "incorrect params",
+			url: "/items?sort=dafteeeeeeee&desc=falseeeeeeee",
+			expectedCode: http.StatusBadRequest,
 			expectedErr:  nil,
 		},
 	}
@@ -212,14 +232,14 @@ func TestHandler_GetItems(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			ucase.EXPECT().
-				List(tc.params).
-				Return(dateAsc, tc.expectedErr)
+			if tc.expectedCode == http.StatusOK {
+				ucase.EXPECT().
+					List(tc.params).
+					Return(dateAsc, tc.expectedErr)
+			}
 
 			rec := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet,
-				"/items" + "?sort=date&desc=" + strconv.FormatBool(tc.params.Desc),
-				nil)
+			req, _ := http.NewRequest(http.MethodGet, tc.url, nil)
 
 			router.ServeHTTP(rec, req)
 
