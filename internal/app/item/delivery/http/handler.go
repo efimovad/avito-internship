@@ -81,7 +81,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	general.Respond(w, r, http.StatusCreated, myItem.ID)
+	general.Respond(w, r, http.StatusCreated, map[string]int64{"id":myItem.ID})
 }
 
 func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
